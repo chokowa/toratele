@@ -2,42 +2,131 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no">
     <title>虎テレ TV送信機</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; line-height: 1.6; background: #f4f4f4; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        h1 { color: #f26d21; font-size: 1.5rem; margin-top: 0; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; box-sizing: border-box; }
-        button { background: #000; color: #ff0; border: none; padding: 15px; width: 100%; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        button:active { transform: scale(0.98); }
-        .help { background: #fffde7; padding: 15px; border-radius: 8px; font-size: 0.9rem; border: 1px solid #ffe082; }
-        .code { background: #eee; padding: 10px; border-radius: 4px; font-family: monospace; word-break: break-all; font-size: 0.8rem; margin: 10px 0; user-select: all; }
+        :root {
+            --ios-blue: #007aff;
+            --ios-bg: #f2f2f7;
+            --tiger-orange: #f26d21;
+            --tiger-yellow: #ffdc32;
+        }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            padding: 24px; 
+            background: var(--ios-bg); 
+            color: #000;
+            margin: 0;
+        }
+        .container { max-width: 500px; margin: 0 auto; }
+        .card { 
+            background: rgba(255, 255, 255, 0.8); 
+            backdrop-filter: blur(20px); 
+            -webkit-backdrop-filter: blur(20px);
+            padding: 24px; 
+            border-radius: 18px; 
+            box-shadow: 0 8px 32px rgba(0,0,0,0.08); 
+            margin-bottom: 24px; 
+        }
+        h1 { 
+            color: #333; 
+            font-size: 1.4rem; 
+            margin: 0 0 20px 0; 
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        h1::before { content: "🐅"; }
+        
+        .form-group { margin-bottom: 16px; }
+        label { display: block; margin-bottom: 6px; font-size: 0.9rem; font-weight: 600; color: #666; }
+        input { 
+            width: 100%; 
+            padding: 14px; 
+            border: 1px solid #ddd; 
+            border-radius: 12px; 
+            font-size: 1rem; 
+            box-sizing: border-box; 
+            background: white;
+            transition: 0.2s;
+        }
+        input:focus { outline: none; border-color: var(--ios-blue); box-shadow: 0 0 0 4px rgba(0,122,255,0.1); }
+        
+        .btn-send { 
+            background: linear-gradient(135deg, #000 0%, #333 100%); 
+            color: var(--tiger-yellow); 
+            border: none; 
+            padding: 16px; 
+            width: 100%; 
+            border-radius: 14px; 
+            font-size: 1.1rem; 
+            font-weight: 700; 
+            cursor: pointer; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transition: 0.2s ease;
+        }
+        .btn-send:active { transform: scale(0.96); opacity: 0.8; }
+
+        .help-box { 
+            background: #fff; 
+            padding: 20px; 
+            border-radius: 18px; 
+            border: 1px solid #eee;
+            margin-top: 24px;
+        }
+        h3 { margin-top: 0; font-size: 1rem; color: #333; display: flex; align-items: center; gap: 8px; }
+        .code-area { 
+            background: #f8f9fa; 
+            padding: 14px; 
+            border-radius: 10px; 
+            border: 1px dashed #ccc;
+            font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+            font-size: 0.75rem;
+            word-break: break-all;
+            margin: 12px 0;
+            color: #444;
+            user-select: all;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <h1>虎テレ TV送信機</h1>
-        
-        <label for="tv_ip">Fire TVのIPアドレス</label>
-        <input type="text" id="tv_ip" placeholder="例: 192.168.0.242" onchange="saveIP()">
-        
-        <label for="url">送信するURL</label>
-        <input type="text" id="url" placeholder="虎テレのURLを貼ってください">
-        
-        <button onclick="castToTV()">テレビへ送信</button>
-    </div>
-
-    <div class="help">
-        <h3>🚀 かんたん送信（ブックマークレット）【最新版】</h3>
-        <p>以下を<strong>お気に入りのURL欄</strong>に登録してください。押すと動画ストリームを自動検出してテレビへ送ります。</p>
-        <div class="code" id="bookmarklet">
-            javascript:(function(){var ip=localStorage.getItem('tv_ip');if(!ip){ip=prompt('Fire TVのIPを入力','192.168.0.242');if(ip)localStorage.setItem('tv_ip',ip)}if(!ip)return;var u=null;try{var es=performance.getEntriesByType('resource');for(var e of es){if(e.name.includes('.m3u8')){u=e.name;break;}}}catch(x){}if(!u){var vs=document.querySelectorAll('video');for(var v of vs){if(v.currentSrc&&v.currentSrc.length>4){u=v.currentSrc;break;}}}if(!u)u=location.href;var s='http://'+ip+':8080/?url='+encodeURIComponent(u);var i=new Image();i.src=s;alert('送信:'+(u.includes('.m3u8')?'✓動画ストリーム検出':'ページURL')+'\n'+u.slice(0,60));})()
+    <div class="container">
+        <div class="card">
+            <h1>虎テレ TV送信機</h1>
+            
+            <div class="form-group">
+                <label for="tv_ip">Fire TVのIPアドレス</label>
+                <input type="text" id="tv_ip" placeholder="例: 192.168.0.242" onchange="saveIP()">
+            </div>
+            
+            <div class="form-group">
+                <label for="url">送信するURL (m3u8推奨)</label>
+                <input type="text" id="url" placeholder="動画のURLを貼り付け">
+            </div>
+            
+            <button class="btn-send" onclick="castToTV()">テレビへ送信</button>
         </div>
-        <p style="color: #388e3c; font-weight: bold;">✓ 動画再生中に実行してください。.m3u8が検出されれば認証不要でテレビに映せます。</p>
-        <p style="color: #d32f2f; font-weight: bold;">※動かない時：ブラウザの検索バーでお気に入りの名前を入力して候補から実行してください。</p>
+
+        <div class="help-box">
+            <h3>🚀 ブックマークレット（推奨）</h3>
+            <div class="badge">Cookie同期対応</div>
+            <p style="font-size:0.85rem; color:#666; margin:4px 0;">以下のコードを「お気に入り」に登録してください。動画再生中に押すと、ログイン情報を保持したままテレビに送信します。</p>
+            <div class="code-area" id="bookmarklet">javascript:(function(){var ip=localStorage.getItem('tv_ip');if(!ip){ip=prompt('Fire TVのIPを入力', '192.168.0.242');if(ip)localStorage.setItem('tv_ip',ip)}if(!ip)return;var u=null;try{var es=performance.getEntriesByType('resource');for(var e of es){if(e.name.includes('.m3u8')){u=e.name;break;}}}catch(x){}if(!u){var v=document.querySelector('video');if(v&&v.currentSrc)u=v.currentSrc;}if(!u)u=location.href;var s='http://'+ip+':8080/?url='+encodeURIComponent(u)+'&cookie='+encodeURIComponent(document.cookie);var i=new Image();i.src=s;alert('送信中🐯\n'+(u.includes('.m3u8')?'[Stream] ':'[Page] ')+u.slice(0,40)+'...');})()</div>
+            <p style="font-size:0.75rem; color:#888;">※PC/スマホのブラウザでお気に入りをクリックすると発動します。</p>
+        </div>
     </div>
 
     <script>
@@ -62,11 +151,13 @@
                 return;
             }
 
-            const target = 'http://' + ip + ':8080/?url=' + encodeURIComponent(url);
+            // 直接URL送信時はCookie取得ができない(別ドメインのため)ので、
+            // 基本的にブックマークレット経由を推奨する
+            const target = 'http://'+ip+':8080/?url='+encodeURIComponent(url);
             const img = new Image();
             img.src = target;
 
-            alert('送信信号を出しました。テレビを確認してください。');
+            alert('送信しました。テレビを確認してください。\n（ログインが必要なページはブックマークレットをご利用ください）');
         }
     </script>
 </body>
