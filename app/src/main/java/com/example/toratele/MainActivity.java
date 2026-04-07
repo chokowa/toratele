@@ -12,6 +12,8 @@ import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URLDecoder;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends Activity {
     private WebView webView;
@@ -33,7 +35,7 @@ public class MainActivity extends Activity {
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(true);
         
-        // Androidスマホとして偽装（送信元と合わせるため）
+        // Androidスマホとして偽装
         settings.setUserAgentString("Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.6099.144 Mobile Safari/537.36");
 
         CookieManager cookieManager = CookieManager.getInstance();
@@ -55,13 +57,12 @@ public class MainActivity extends Activity {
     }
 
     private void injectFullscreenScript(WebView view) {
-        // 虎テレのプレイヤーを全画面化し、不要なUIを徹底的に排除するスクリプト
         String js = "javascript:(function() {" +
                 "   var style = document.createElement('style');" +
                 "   style.innerHTML = '" +
-                "       header, footer, nav, aside, .cookie-consent, .modal, .header, .footer, .nav-bar, .side-menu, #header, #footer { display: none !important; } " +
+                "       header, footer, nav, aside, .cookie-consent, .modal, .header, .footer, .nav-bar, .side-menu, #header, #footer, .site-header, .site-footer { display: none !important; } " +
                 "       body, html { overflow: hidden !important; background: black !important; padding:0 !important; margin:0 !important; } " +
-                "       #player_container, .video-player-container, .video-js, video, #main_video1, #main_video2 { " +
+                "       #player_container, .video-player-container, .video-js, video, #main_video1, #main_video2, .vjs-tech { " +
                 "           position: fixed !important; top: 0 !important; left: 0 !important; " +
                 "           width: 100vw !important; height: 100vh !important; " +
                 "           z-index: 999999 !important; background: black !important; border:none !important; " +
@@ -127,19 +128,27 @@ public class MainActivity extends Activity {
 
                 if (finalUrl != null) {
                     runOnUiThread(() -> {
-                        // Cookieをドメイン全体(hanshintigers.jp)に対してセット
+                        // Cookie同期を徹底強化
                         if (finalCookie != null && !finalCookie.isEmpty()) {
                             CookieManager cm = CookieManager.getInstance();
                             cm.setAcceptCookie(true);
                             cm.setAcceptThirdPartyCookies(webView, true);
+                            
                             String[] cookies = finalCookie.split(";");
-                            for (String c : cookies) {
-                                cm.setCookie(".hanshintigers.jp", c.trim() + "; domain=.hanshintigers.jp; path=/");
+                            String[] domains = { "https://.hanshintigers.jp", "https://movie.hanshintigers.jp", "https://hanshintigers.jp" };
+                            
+                            for (String domainUrl : domains) {
+                                for (String c : cookies) {
+                                    cm.setCookie(domainUrl, c.trim() + "; Path=/; Domain=.hanshintigers.jp; Secure; SameSite=Lax");
+                                }
                             }
                             cm.flush();
                         }
-                        // ページ全体（ハイブリッド方式）をロード
-                        webView.loadUrl(finalUrl);
+                        
+                        // Refererを添えてロード（リダイレクト回避）
+                        Map<String, String> extraHeaders = new HashMap<>();
+                        extraHeaders.put("Referer", "https://movie.hanshintigers.jp/");
+                        webView.loadUrl(finalUrl, extraHeaders);
                     });
                 }
             }
