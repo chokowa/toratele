@@ -121,11 +121,11 @@
         </div>
 
         <div class="help-box">
-            <h3>🚀 ブックマークレット（最高精度・ネイティブ版）</h3>
-            <div class="badge">ExoPlayer 直送対応</div>
-            <p style="font-size:0.85rem; color:#666; margin:4px 0;">以下のコードを登録し、虎テレの再生画面で実行してください。動画ストリームを抽出し、認証情報を添えてテレビのネイティブプレイヤーへ直送します。</p>
-            <div class="code-area" id="bookmarklet">javascript:(function(){var ip=localStorage.getItem('tv_ip');if(!ip){ip=prompt('Fire TVのIPを入力', '192.168.0.242');if(ip)localStorage.setItem('tv_ip',ip)}if(!ip)return;var u=null;try{var rs=performance.getEntriesByType('resource');for(var i=rs.length-1;i>=0;i--){if(rs[i].name.includes('.m3u8')){u=rs[i].name;break;}}}catch(e){}if(!u){var v=document.querySelector('video');if(v&&v.currentSrc)u=v.currentSrc;}if(!u)u=location.href;var s='http://'+ip+':8080/?url='+encodeURIComponent(u)+'&cookie='+encodeURIComponent(document.cookie);var img=new Image();img.src=s;alert('ネイティブ送信中🐯\n'+(u.includes('.m3u8')?'[Stream] ':'[Page] ')+u.slice(0,50)+'...');})()</div>
-            <p style="font-size:0.75rem; color:#888;">※最新のMedia3 ExoPlayerがAES-128暗号鍵も含めて処理します。</p>
+            <h3>🚀 ブックマークレット（超・高精度ネイティブ版）</h3>
+            <div class="badge">再帰探索・ExoPlayer対応</div>
+            <p style="font-size:0.85rem; color:#666; margin:4px 0;">虎テレの再生画面（動画が動いている状態）で実行してください。隠れた動画URLをiframeの奥深くまで探し出します。</p>
+            <div class="code-area" id="bookmarklet">javascript:(function(){var ip=localStorage.getItem('tv_ip');if(!ip){ip=prompt('Fire TVのIPを入力', '192.168.0.242');if(ip)localStorage.setItem('tv_ip',ip)}if(!ip)return;function f(w){try{var r=w.performance.getEntriesByType('resource');for(var i=r.length-1;i>=0;i--){if(r[i].name.includes('.m3u8'))return r[i].name;}}catch(e){}for(var i=0;i<w.frames.length;i++){var u=f(w.frames[i]);if(u)return u;}return null;}var u=f(window);if(!u){var v=document.querySelector('video');if(v&&v.currentSrc)u=v.currentSrc;}if(!u){alert('動画ストリームが見つかりません。一度再生を停止・再開してから、10秒ほど待って再度お試しください。');return;}var s='http://'+ip+':8080/?url='+encodeURIComponent(u)+'&cookie='+encodeURIComponent(document.cookie);var img=new Image();img.src=s;alert('送信成功🐯\nURL: '+u.slice(0,50)+'...');})()</div>
+            <p style="font-size:0.75rem; color:#888;">※送信時に表示されるURLが「.m3u8」で終わっていることを確認してください。</p>
         </div>
     </div>
 
