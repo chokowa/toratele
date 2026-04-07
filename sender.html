@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>虎テレ TV送信機</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; line-height: 1.6; background: #f4f4f4; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #f26d21; font-size: 1.5rem; margin-top: 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; box-sizing: border-box; }
+        button { background: #000; color: #ff0; border: none; padding: 15px; width: 100%; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:active { transform: scale(0.98); }
+        .help { background: #fffde7; padding: 15px; border-radius: 8px; font-size: 0.9rem; border: 1px solid #ffe082; margin-top: 20px; }
+        .code { background: #eee; padding: 10px; border-radius: 4px; font-family: monospace; word-break: break-all; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1>虎テレ TV送信機</h1>
+        
+        <label for="tv_ip">Fire TVのIPアドレス</label>
+        <input type="text" id="tv_ip" placeholder="例: 192.168.1.50" onchange="saveIP()">
+        
+        <label for="url">送信するURL</label>
+        <input type="text" id="url" placeholder="虎テレのURL">
+        
+        <button onclick="castToTV()">テレビへ送信</button>
+    </div>
+
+    <div class="help">
+        <h3>使い方（ブックマークレット）</h3>
+        <p>虎テレ視聴中にワンタップで送るには、以下のコードをブラウザの「ブックマーク」名「TVに飛ばす」として保存してください：</p>
+        <div class="code" id="bookmarklet">
+            javascript:(function(){var ip=localStorage.getItem('toratele_tv_ip');if(!ip){ip=prompt('IPを入力','');if(ip)localStorage.setItem('toratele_tv_ip',ip)}if(ip){fetch('http://'+ip+':8080/?url='+encodeURIComponent(location.href)).then(()=>alert('送信成功！')).catch(e=>alert('エラー:'+e))}})()
+        </div>
+    </div>
+
+    <script>
+        // 保存されたIPを復元
+        window.onload = function() {
+            const savedIp = localStorage.getItem('toratele_tv_ip');
+            if (savedIp) document.getElementById('tv_ip').value = savedIp;
+        };
+
+        function saveIP() {
+            const ip = document.getElementById('tv_ip').value;
+            localStorage.setItem('toratele_tv_ip', ip);
+        }
+
+        function castToTV() {
+            const ip = document.getElementById('tv_ip').value;
+            const url = document.getElementById('url').value;
+            
+            if (!ip || !url) {
+                alert('IPアドレスとURLの両方を入力してください。');
+                return;
+            }
+
+            const target = 'http://' + ip + ':8080/?url=' + encodeURIComponent(url);
+            
+            fetch(target)
+                .then(response => {
+                    if (response.ok) alert('テレビへ送信しました！');
+                    else alert('送信に失敗しました（TV側アプリが起動しているか確認してください）');
+                })
+                .catch(error => alert('通信エラー: ' + error));
+        }
+    </script>
+</body>
+</html>

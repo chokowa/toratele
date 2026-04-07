@@ -1,0 +1,33 @@
+apply plugin: 'com.android.application'
+
+android {
+    namespace 'com.example.toratele'
+    compileSdk 33
+
+    defaultConfig {
+        applicationId "com.example.toratele"
+        minSdk 21
+        targetSdk 33
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    
+    // APKの名前を固定し、見つけやすくする設定
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            outputFileName = "ToraTele_Receiver.apk"
+        }
+    }
+}
+
+dependencies {
+    // 依存関係は極小に (今回はWebViewとJava標準機能のみ)
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+}
