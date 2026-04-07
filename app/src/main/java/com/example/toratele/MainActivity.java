@@ -1,12 +1,22 @@
 package com.example.toratele;
 
 import android.app.Activity;
+import android.net.Uri;
 import android.os.Bundle;
+import android.view.View;
 import android.view.WindowManager;
 import android.webkit.CookieManager;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
+import androidx.media3.common.MediaItem;
+import androidx.media3.common.PlaybackException;
+import androidx.media3.common.Player;
+import androidx.media3.datasource.DefaultHttpDataSource;
+import androidx.media3.exoplayer.ExoPlayer;
+import androidx.media3.exoplayer.hls.HlsMediaSource;
+import androidx.media3.ui.PlayerView;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
@@ -16,7 +26,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class MainActivity extends Activity {
+    private FrameLayout rootLayout;
     private WebView webView;
+    private PlayerView playerView;
+    private ExoPlayer player;
     private ServerSocket serverSocket;
 
     @Override
@@ -26,64 +39,61 @@ public class MainActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
+        rootLayout = new FrameLayout(this);
+        
+        // 1. WebViewの初期化 (待機画面・ハイブリッド用)
         webView = new WebView(this);
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-        settings.setAllowFileAccess(true);
-        settings.setAllowContentAccess(true);
-        
-        // Androidスマホとして偽装
         settings.setUserAgentString("Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.6099.144 Mobile Safari/537.36");
 
-        CookieManager cookieManager = CookieManager.getInstance();
-        cookieManager.setAcceptCookie(true);
-        cookieManager.setAcceptThirdPartyCookies(webView, true);
+        // 2. ExoPlayer (PlayerView) の初期化 (ネイティブ再生用)
+        playerView = new PlayerView(this);
+        player = new ExoPlayer.Builder(this).build();
+        playerView.setPlayer(player);
+        playerView.setVisibility(View.GONE);
+        playerView.setUseController(true); // リモコン操作のためコントローラー有効
 
-        webView.setWebViewClient(new WebViewClient() {
+        player.addListener(new Player.Listener() {
             @Override
-            public void onPageFinished(WebView view, String url) {
-                if (url.contains("hanshintigers.jp")) {
-                    injectFullscreenScript(view);
-                }
+            public void onPlayerError(PlaybackException error) {
+                error.printStackTrace();
+                runOnUiThread(() -> {
+                    playerView.setVisibility(View.GONE);
+                    webView.setVisibility(View.VISIBLE);
+                    showErrorScreen("再生エラー: " + error.getMessage() + "\n(認証切れ、またはDRM非対応の可能性)");
+                });
             }
         });
 
-        setContentView(webView);
+        rootLayout.addView(webView);
+        rootLayout.addView(playerView);
+        setContentView(rootLayout);
+
         showReadyScreen();
         startServer();
     }
 
-    private void injectFullscreenScript(WebView view) {
-        String js = "javascript:(function() {" +
-                "   var style = document.createElement('style');" +
-                "   style.innerHTML = '" +
-                "       header, footer, nav, aside, .cookie-consent, .modal, .header, .footer, .nav-bar, .side-menu, #header, #footer, .site-header, .site-footer { display: none !important; } " +
-                "       body, html { overflow: hidden !important; background: black !important; padding:0 !important; margin:0 !important; } " +
-                "       #player_container, .video-player-container, .video-js, video, #main_video1, #main_video2, .vjs-tech { " +
-                "           position: fixed !important; top: 0 !important; left: 0 !important; " +
-                "           width: 100vw !important; height: 100vh !important; " +
-                "           z-index: 999999 !important; background: black !important; border:none !important; " +
-                "       }';" +
-                "   document.head.appendChild(style);" +
-                "   function startPlay() {" +
-                "       var v = document.querySelector('video');" +
-                "       if(v) { v.play().catch(function(e){ console.log(e); }); }" +
-                "       var btn = document.querySelector('.vjs-big-play-button');" +
-                "       if(btn) { btn.click(); }" +
-                "   }" +
-                "   setInterval(startPlay, 1000);" +
-                "   startPlay();" +
-                "})()";
-        view.loadUrl(js);
+    private void showReadyScreen() {
+        runOnUiThread(() -> {
+            String html = "<html><body style='background-color:#111;color:white;display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;font-family:sans-serif;margin:0;'>" +
+                    "<h1 style='color:#ff0;font-size:3rem;margin-bottom:10px;'>&#x1F405; ToraTele READY</h1>" +
+                    "<p style='font-size:1.5rem;'>ネイティブ・プレイヤー待機中 (ExoPlayer)</p>" +
+                    "</body></html>";
+            webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
+            webView.setVisibility(View.VISIBLE);
+            playerView.setVisibility(View.GONE);
+        });
     }
 
-    private void showReadyScreen() {
-        String html = "<html><body style='background-color:#111;color:white;display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;font-family:sans-serif;margin:0;'>" +
-                "<h1 style='color:#ff0;font-size:3rem;margin-bottom:10px;'>&#x1F405; ToraTele READY</h1>" +
-                "<p style='font-size:1.5rem;'>スマホから虎テレの試合を選んで送信してください</p>" +
+    private void showErrorScreen(String message) {
+        String html = "<html><body style='background-color:#500;color:white;display:flex;justify-content:center;align-items:center;height:100vh;flex-direction:column;font-family:sans-serif;margin:0;'>" +
+                "<h1 style='color:#fff;font-size:2rem;margin-bottom:10px;'>&#x274C; Error</h1>" +
+                "<p style='font-size:1.2rem;text-align:center;padding:20px;'>" + message + "</p>" +
+                "<p style='font-size:1rem;color:#ccc;'>スマホから再度送信してください</p>" +
                 "</body></html>";
         webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
     }
@@ -105,21 +115,14 @@ public class MainActivity extends Activity {
             BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             String line = reader.readLine();
             if (line != null && line.contains("GET")) {
-                String[] parts = line.split(" ");
-                String path = parts[1];
-                
-                String targetUrl = null;
-                String cookieData = null;
+                String path = line.split(" ")[1];
+                String targetUrl = null, cookieData = null;
                 
                 if (path.contains("?")) {
                     String query = path.substring(path.indexOf("?") + 1);
-                    String[] params = query.split("&");
-                    for (String param : params) {
-                        if (param.startsWith("url=")) {
-                            targetUrl = URLDecoder.decode(param.substring(4), "UTF-8");
-                        } else if (param.startsWith("cookie=")) {
-                            cookieData = URLDecoder.decode(param.substring(7), "UTF-8");
-                        }
+                    for (String param : query.split("&")) {
+                        if (param.startsWith("url=")) targetUrl = URLDecoder.decode(param.substring(4), "UTF-8");
+                        else if (param.startsWith("cookie=")) cookieData = URLDecoder.decode(param.substring(7), "UTF-8");
                     }
                 }
                 
@@ -128,27 +131,14 @@ public class MainActivity extends Activity {
 
                 if (finalUrl != null) {
                     runOnUiThread(() -> {
-                        // Cookie同期を徹底強化
-                        if (finalCookie != null && !finalCookie.isEmpty()) {
-                            CookieManager cm = CookieManager.getInstance();
-                            cm.setAcceptCookie(true);
-                            cm.setAcceptThirdPartyCookies(webView, true);
-                            
-                            String[] cookies = finalCookie.split(";");
-                            String[] domains = { "https://.hanshintigers.jp", "https://movie.hanshintigers.jp", "https://hanshintigers.jp" };
-                            
-                            for (String domainUrl : domains) {
-                                for (String c : cookies) {
-                                    cm.setCookie(domainUrl, c.trim() + "; Path=/; Domain=.hanshintigers.jp; Secure; SameSite=Lax");
-                                }
-                            }
-                            cm.flush();
+                        if (finalUrl.contains(".m3u8")) {
+                            playNativeStream(finalUrl, finalCookie);
+                        } else {
+                            // URLがストリームでない場合はWebViewで開く
+                            webView.setVisibility(View.VISIBLE);
+                            playerView.setVisibility(View.GONE);
+                            webView.loadUrl(finalUrl);
                         }
-                        
-                        // Refererを添えてロード（リダイレクト回避）
-                        Map<String, String> extraHeaders = new HashMap<>();
-                        extraHeaders.put("Referer", "https://movie.hanshintigers.jp/");
-                        webView.loadUrl(finalUrl, extraHeaders);
                     });
                 }
             }
@@ -157,9 +147,43 @@ public class MainActivity extends Activity {
         } catch (Exception e) { e.printStackTrace(); }
     }
 
+    private void playNativeStream(String url, String cookie) {
+        webView.setVisibility(View.GONE);
+        playerView.setVisibility(View.VISIBLE);
+        
+        // Androidスマホとして偽装
+        String ua = "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.6099.144 Mobile Safari/537.36";
+        
+        // 通信レイヤーでのヘッダー強制注入 (AES鍵、セグメントも網羅)
+        DefaultHttpDataSource.Factory dataSourceFactory = new DefaultHttpDataSource.Factory()
+                .setUserAgent(ua)
+                .setConnectTimeoutMs(10000)
+                .setReadTimeoutMs(10000)
+                .setAllowCrossProtocolRedirects(true);
+        
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Referer", "https://movie.hanshintigers.jp/");
+        if (cookie != null && !cookie.isEmpty()) headers.put("Cookie", cookie);
+        dataSourceFactory.setDefaultRequestProperties(headers);
+
+        HlsMediaSource mediaSource = new HlsMediaSource.Factory(dataSourceFactory)
+                .createMediaSource(MediaItem.fromUri(Uri.parse(url)));
+
+        player.setMediaSource(mediaSource);
+        player.prepare();
+        player.play();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (player != null) player.pause();
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (player != null) player.release();
         try { if (serverSocket != null) serverSocket.close(); } catch (Exception e) {}
     }
 }

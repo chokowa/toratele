@@ -19,7 +19,12 @@ android {
         }
     }
     
-    // APKの名前を固定し、見つけやすくする設定
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    
+    // APKの名前を固定
     applicationVariants.all { variant ->
         variant.outputs.all { output ->
             outputFileName = "ToraTele_Receiver.apk"
@@ -28,6 +33,11 @@ android {
 }
 
 dependencies {
-    // 依存関係は極小に (今回はWebViewとJava標準機能のみ)
     implementation 'androidx.appcompat:appcompat:1.6.1'
+    
+    // Media3 (ExoPlayer) の追加
+    def media3_version = "1.1.1"
+    implementation "androidx.media3:media3-exoplayer:$media3_version"
+    implementation "androidx.media3:media3-ui:$media3_version"
+    implementation "androidx.media3:media3-exoplayer-hls:$media3_version"
 }
