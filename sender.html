@@ -32,9 +32,9 @@
 
     <div class="help">
         <h3>🚀 かんたん送信（ブックマークレット）</h3>
-        <p>以下のコードをお気に入りに保存すると、視聴中にワンタップで送れます。</p>
+        <p>以下のコードをお気に入りに保存すると、視聴中にログイン状態ごとテレビへ送れます。</p>
         <div class="code" id="bookmarklet">
-            javascript:(function(){var ip=localStorage.getItem('tv_ip');if(!ip){ip=prompt('Fire TVのIPを入力','192.168.0.242');if(ip)localStorage.setItem('tv_ip',ip)}if(ip){var v=document.querySelector('iframe[src*=\"hanshintigers.jp\"], iframe[src*=\"brightcove\"]');var u=v?v.src:location.href;var s='http://'+ip+':8080/?url='+encodeURIComponent(u);var i=new Image();i.src=s;alert('送信しました:'+(v?'[動画抽出]':'[ページ全体]'));}})()
+            javascript:(function(){var ip=localStorage.getItem('tv_ip');if(!ip){ip=prompt('Fire TVのIPを入力','192.168.0.242');if(ip)localStorage.setItem('tv_ip',ip)}if(ip){var s='http://'+ip+':8080/?url='+encodeURIComponent(location.href)+'&cookie='+encodeURIComponent(document.cookie);var i=new Image();i.src=s;alert('テレビへ送信しました ('+ip+')');}})()
         </div>
         <p style="color: #d32f2f; font-weight: bold;">※動かない時のコツ：ブラウザの検索バーでお気に入りの名前（「テレビ」など）を検索して実行してください。</p>
     </div>
