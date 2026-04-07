@@ -31,12 +31,13 @@
     </div>
 
     <div class="help">
-        <h3>🚀 かんたん送信（ブックマークレット）</h3>
-        <p>以下のコードをお気に入りに保存すると、視聴中にログイン状態ごとテレビへ送れます。</p>
+        <h3>🚀 かんたん送信（ブックマークレット）【最新版】</h3>
+        <p>以下を<strong>お気に入りのURL欄</strong>に登録してください。押すと動画ストリームを自動検出してテレビへ送ります。</p>
         <div class="code" id="bookmarklet">
-            javascript:(function(){var ip=localStorage.getItem('tv_ip');if(!ip){ip=prompt('Fire TVのIPを入力','192.168.0.242');if(ip)localStorage.setItem('tv_ip',ip)}if(ip){var s='http://'+ip+':8080/?url='+encodeURIComponent(location.href)+'&cookie='+encodeURIComponent(document.cookie);var i=new Image();i.src=s;alert('テレビへ送信しました ('+ip+')');}})()
+            javascript:(function(){var ip=localStorage.getItem('tv_ip');if(!ip){ip=prompt('Fire TVのIPを入力','192.168.0.242');if(ip)localStorage.setItem('tv_ip',ip)}if(!ip)return;var u=null;try{var es=performance.getEntriesByType('resource');for(var e of es){if(e.name.includes('.m3u8')){u=e.name;break;}}}catch(x){}if(!u){var vs=document.querySelectorAll('video');for(var v of vs){if(v.currentSrc&&v.currentSrc.length>4){u=v.currentSrc;break;}}}if(!u)u=location.href;var s='http://'+ip+':8080/?url='+encodeURIComponent(u);var i=new Image();i.src=s;alert('送信:'+(u.includes('.m3u8')?'✓動画ストリーム検出':'ページURL')+'\n'+u.slice(0,60));})()
         </div>
-        <p style="color: #d32f2f; font-weight: bold;">※動かない時のコツ：ブラウザの検索バーでお気に入りの名前（「テレビ」など）を検索して実行してください。</p>
+        <p style="color: #388e3c; font-weight: bold;">✓ 動画再生中に実行してください。.m3u8が検出されれば認証不要でテレビに映せます。</p>
+        <p style="color: #d32f2f; font-weight: bold;">※動かない時：ブラウザの検索バーでお気に入りの名前を入力して候補から実行してください。</p>
     </div>
 
     <script>
