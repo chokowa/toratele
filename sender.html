@@ -121,11 +121,11 @@
         </div>
 
         <div class="help-box">
-            <h3>🚀 ブックマークレット（推奨）</h3>
-            <div class="badge">Cookie同期対応</div>
-            <p style="font-size:0.85rem; color:#666; margin:4px 0;">以下のコードを「お気に入り」に登録してください。動画再生中に押すと、ログイン情報を保持したままテレビに送信します。</p>
-            <div class="code-area" id="bookmarklet">javascript:(function(){var ip=localStorage.getItem('tv_ip');if(!ip){ip=prompt('Fire TVのIPを入力', '192.168.0.242');if(ip)localStorage.setItem('tv_ip',ip)}if(!ip)return;var u=null;try{var es=performance.getEntriesByType('resource');for(var e of es){if(e.name.includes('.m3u8')){u=e.name;break;}}}catch(x){}if(!u){var v=document.querySelector('video');if(v&&v.currentSrc)u=v.currentSrc;}if(!u)u=location.href;var s='http://'+ip+':8080/?url='+encodeURIComponent(u)+'&cookie='+encodeURIComponent(document.cookie);var i=new Image();i.src=s;alert('送信中🐯\n'+(u.includes('.m3u8')?'[Stream] ':'[Page] ')+u.slice(0,40)+'...');})()</div>
-            <p style="font-size:0.75rem; color:#888;">※PC/スマホのブラウザでお気に入りをクリックすると発動します。</p>
+            <h3>🚀 ブックマークレット（新・ハイブリッド方式）</h3>
+            <div class="badge">ページURL・Cookie同期対応</div>
+            <p style="font-size:0.85rem; color:#666; margin:4px 0;">以下のコードを「お気に入り」に登録してください。虎テレの再生画面で押すと、テレビ側でログインした状態で動画が再生されます。</p>
+            <div class="code-area" id="bookmarklet">javascript:(function(){var ip=localStorage.getItem('tv_ip');if(!ip){ip=prompt('Fire TVのIPを入力', '192.168.0.242');if(ip)localStorage.setItem('tv_ip',ip)}if(!ip)return;var s='http://'+ip+':8080/?url='+encodeURIComponent(location.href)+'&cookie='+encodeURIComponent(document.cookie);var i=new Image();i.src=s;alert('ハイブリッド送信中🐯\n'+location.href.slice(0,60)+'...');})()</div>
+            <p style="font-size:0.75rem; color:#888;">※動画ストリームの直接解析を行わないため、認証エラーを回避できます。</p>
         </div>
     </div>
 

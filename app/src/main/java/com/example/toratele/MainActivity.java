@@ -29,10 +29,13 @@ public class MainActivity extends Activity {
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
-        // スマホのChromeとして完全偽装
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        settings.setAllowFileAccess(true);
+        settings.setAllowContentAccess(true);
+        
+        // Androidスマホとして偽装（送信元と合わせるため）
         settings.setUserAgentString("Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.6099.144 Mobile Safari/537.36");
 
-        // サードパーティCookieを完全許可
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
         cookieManager.setAcceptThirdPartyCookies(webView, true);
@@ -40,17 +43,8 @@ public class MainActivity extends Activity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageFinished(WebView view, String url) {
-                if (url.startsWith("http")) {
-                    String cleanJs = "javascript:(function() {" +
-                            "   function clean() {" +
-                            "       var css = 'header, footer, nav, aside, .cookie-consent, .modal, #header, #footer { display: none !important; }'; " +
-                            "       css += 'body, html { overflow: hidden !important; background: black !important; }'; " +
-                            "       css += 'video, .video-player, #player_container { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 99999 !important; background: black !important; border:none !important; }'; " +
-                            "       var style = document.createElement('style'); style.innerHTML = css; document.head.appendChild(style); " +
-                            "   }" +
-                            "   setInterval(clean, 1000); clean();" +
-                            "})()";
-                    view.loadUrl(cleanJs);
+                if (url.contains("hanshintigers.jp")) {
+                    injectFullscreenScript(view);
                 }
             }
         });
@@ -58,6 +52,31 @@ public class MainActivity extends Activity {
         setContentView(webView);
         showReadyScreen();
         startServer();
+    }
+
+    private void injectFullscreenScript(WebView view) {
+        // 虎テレのプレイヤーを全画面化し、不要なUIを徹底的に排除するスクリプト
+        String js = "javascript:(function() {" +
+                "   var style = document.createElement('style');" +
+                "   style.innerHTML = '" +
+                "       header, footer, nav, aside, .cookie-consent, .modal, .header, .footer, .nav-bar, .side-menu, #header, #footer { display: none !important; } " +
+                "       body, html { overflow: hidden !important; background: black !important; padding:0 !important; margin:0 !important; } " +
+                "       #player_container, .video-player-container, .video-js, video, #main_video1, #main_video2 { " +
+                "           position: fixed !important; top: 0 !important; left: 0 !important; " +
+                "           width: 100vw !important; height: 100vh !important; " +
+                "           z-index: 999999 !important; background: black !important; border:none !important; " +
+                "       }';" +
+                "   document.head.appendChild(style);" +
+                "   function startPlay() {" +
+                "       var v = document.querySelector('video');" +
+                "       if(v) { v.play().catch(function(e){ console.log(e); }); }" +
+                "       var btn = document.querySelector('.vjs-big-play-button');" +
+                "       if(btn) { btn.click(); }" +
+                "   }" +
+                "   setInterval(startPlay, 1000);" +
+                "   startPlay();" +
+                "})()";
+        view.loadUrl(js);
     }
 
     private void showReadyScreen() {
@@ -108,86 +127,25 @@ public class MainActivity extends Activity {
 
                 if (finalUrl != null) {
                     runOnUiThread(() -> {
-                        if (finalUrl.contains(".m3u8")) {
-                            // hls.js を使ったカスタムプレイヤーで再生
-                            // Android WebViewはネイティブHLSをサポートしないため hls.js が必須
-                            String hlsPlayerHtml = buildHlsPlayerHtml(finalUrl);
-                            // baseUrlに虎テレドメインを指定してCORSを回避
-                            webView.loadDataWithBaseURL(
-                                "https://movie.hanshintigers.jp",
-                                hlsPlayerHtml,
-                                "text/html", "UTF-8", null
-                            );
-                        } else {
-                            // 通常URLの場合：CookieをセットしてWebViewで開く
-                            if (finalCookie != null && !finalCookie.isEmpty()) {
-                                CookieManager.getInstance().setCookie("https://movie.hanshintigers.jp", finalCookie);
-                                CookieManager.getInstance().flush();
+                        // Cookieをドメイン全体(hanshintigers.jp)に対してセット
+                        if (finalCookie != null && !finalCookie.isEmpty()) {
+                            CookieManager cm = CookieManager.getInstance();
+                            cm.setAcceptCookie(true);
+                            cm.setAcceptThirdPartyCookies(webView, true);
+                            String[] cookies = finalCookie.split(";");
+                            for (String c : cookies) {
+                                cm.setCookie(".hanshintigers.jp", c.trim() + "; domain=.hanshintigers.jp; path=/");
                             }
-                            webView.loadUrl(finalUrl);
+                            cm.flush();
                         }
+                        // ページ全体（ハイブリッド方式）をロード
+                        webView.loadUrl(finalUrl);
                     });
                 }
             }
             socket.getOutputStream().write("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\nOK".getBytes());
             socket.close();
         } catch (Exception e) { e.printStackTrace(); }
-    }
-
-    /**
-     * hls.js を CDN から読み込み、m3u8 ストリームをテレビで再生するHTMLを生成する。
-     * Android WebViewはネイティブHLSをサポートしないが、
-     * hls.js はMediaSource Extensions(MSE)を使って確実に再生できる。
-     */
-    private String buildHlsPlayerHtml(String streamUrl) {
-        // シングルクォートをエスケープしてJSインジェクションを防ぐ
-        String safeUrl = streamUrl.replace("'", "\\'");
-        return "<!DOCTYPE html>" +
-            "<html><head>" +
-            "<meta charset='UTF-8'>" +
-            "<meta name='viewport' content='width=device-width, initial-scale=1'>" +
-            "<style>" +
-            "* { margin:0; padding:0; box-sizing:border-box; }" +
-            "body { background:#000; width:100vw; height:100vh; overflow:hidden; " +
-            "  display:flex; align-items:center; justify-content:center; }" +
-            "video { width:100vw; height:100vh; object-fit:contain; }" +
-            "#status { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); " +
-            "  color:#ff0; font-size:2rem; font-family:sans-serif; text-align:center;" +
-            "  background:rgba(0,0,0,0.7); padding:20px; border-radius:12px; pointer-events:none; }" +
-            "</style>" +
-            "</head><body>" +
-            "<div id='status'>&#x1F405; 読み込み中...</div>" +
-            "<video id='video' autoplay controls playsinline></video>" +
-            "<script src='https://cdn.jsdelivr.net/npm/hls.js@latest'></script>" +
-            "<script>" +
-            "var streamUrl = '" + safeUrl + "';" +
-            "var video = document.getElementById('video');" +
-            "var status = document.getElementById('status');" +
-            "if (Hls.isSupported()) {" +
-            "  var hls = new Hls({ debug: false, enableWorker: true });" +
-            "  hls.loadSource(streamUrl);" +
-            "  hls.attachMedia(video);" +
-            "  hls.on(Hls.Events.MANIFEST_PARSED, function() {" +
-            "    status.style.display = 'none';" +
-            "    video.play().catch(function(e) { console.error(e); });" +
-            "  });" +
-            "  hls.on(Hls.Events.ERROR, function(event, data) {" +
-            "    if (data.fatal) {" +
-            "      status.style.display = 'block';" +
-            "      status.innerHTML = '&#x274C; 再生エラー<br>' + data.details;" +
-            "    }" +
-            "  });" +
-            "} else if (video.canPlayType('application/vnd.apple.mpegurl')) {" +
-            "  video.src = streamUrl;" +
-            "  video.addEventListener('loadedmetadata', function() {" +
-            "    status.style.display = 'none';" +
-            "    video.play();" +
-            "  });" +
-            "} else {" +
-            "  status.innerHTML = '&#x274C; HLS未対応の環境です';" +
-            "}" +
-            "</script>" +
-            "</body></html>";
     }
 
     @Override
